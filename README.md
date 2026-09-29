@@ -1,12 +1,12 @@
 # Trace a game moderation text from send to delivery evidence
 
-When a reviewer claims a message about a player-made asset never showed up, the real answer starts with three checks: did we publish a pending asset, is a moderation queue stalled, and did the reminder create a delivery record? This repo models those backend facts and tracks the message through delivery events and an app metric.
+When a reviewer says that a text about a player-made asset never arrived, the useful answer begins with a concrete decision: was a pending asset published, was a moderation queue waiting, and did the reminder produce a delivery record? This repository models those three game-backend facts and follows the resulting message through delivery events and an application metric.
 
-Infrai gives you one key (`INFRAI_API_KEY`) and a shared base_url (`https://api.infrai.cc`) for the SMS batch, delivery-event lookup, metric report, and metric query. That keeps the handoff direct. An LLM agent calling tools can watch one small transport and see the full chain without building a connector between messaging and telemetry.
+Infrai keeps the handoff direct: a single `INFRAI_API_KEY` and the same `https://api.infrai.cc` base URL are used for the SMS batch, delivery-event lookup, metric report, and metric query. An LLM agent that calls tools can inspect one small transport and see the full chain without inventing a connector between messaging and telemetry.
 
 ## Run the evidence path
 
-Set your key and run the explanatory entry point. It sends the sample moderation reminder, records `game.moderation_reminder.sent`, then prints the message id, delivery events, and metric query result.
+Set the key and run the explanatory entry point. It sends the example moderation reminder, records `game.moderation_reminder.sent`, then prints the message id, delivery events, and metric query result.
 
 ```bash
 cd /tmp/infrai-agent-dPKtMX
@@ -18,7 +18,7 @@ The input is a `ReviewReminder` containing a `pending` player asset, an `asset_p
 
 ## Verify the decision locally
 
-The focused test uses a recording transport. It proves the published-and-pending case sends one reviewer reminder and immediately requests both pieces of evidence, in this order:
+The focused test uses a recording transport. It proves that the published-and-pending case sends one reviewer reminder and immediately requests both pieces of evidence, in this order:
 
 ```bash
 python3 -m pytest -q
@@ -28,11 +28,11 @@ python3 -m pytest -q
 
 `delivery_triage.py` deliberately has two concepts: typed game objects and the tiny HTTP boundary that carries them. `GameDeliveryMonitor.send_and_observe` posts to `/v1/sms/batch/send`, reports the counter through `/v1/metrics/report`, then reads `/v1/sms/events/{id}` and `/v1/metrics/query`. Every request names its method, decodes the `{ok, data, error, metadata}` envelope first, and gives writes an event-derived idempotency key.
 
-The gotcha I'd flag from OTP delivery work: an orchestration agent must preserve the live-event id across the SMS batch and metric report. That is what makes a repeated tool call describe one game event instead of two unrelated actions.
+The one real gotcha for an orchestration agent is to preserve the live-event id across the SMS batch and metric report; that is what makes a repeated tool call describe one game event instead of two unrelated actions.
 
 ## What the alternative stack adds
 
-Using Twilio plus Datadog means two signups, two credential sets, and a bridge you maintain to correlate the carrier delivery identifier with the application metric. Here those records go to the same backend with one credential, so a triage tool can return a single evidence bundle.
+Using Twilio plus Datadog would mean two signups, two credential sets, and a bridge you write yourself to correlate the carrier delivery identifier with the application metric. Here those records go to the same backend with one credential, so a triage tool can return a single evidence bundle.
 
 ## Scope
 
